@@ -1,0 +1,53 @@
+Sentiment Model Info (Backend)
+==============================
+
+This project uses a resilient sentiment pipeline with multiple fallbacks so the
+backend works even when transformer weights are not present locally.
+
+Where It Lives
+--------------
+- Overall sentiment scoring: src/nlp/bert_sentiment.py
+- Aspect + context aggregation: src/nlp/aspect_sentiment.py
+- Explainability tokens (attention/lexical): src/nlp/explainability.py
+
+Primary Model (Transformers)
+----------------------------
+- Default HF model id:
+  cardiffnlp/twitter-roberta-base-sentiment
+- Controlled by env var:
+  SENTIMENT_MODEL
+- By default the backend runs with HF_LOCAL_FILES_ONLY=1, meaning it will only
+  load already-cached weights and will NOT download from the internet.
+
+Outputs
+-------
+get_sentiment(text) returns a dict:
+- label: POSITIVE | NEGATIVE | NEUTRAL
+- confidence: 0..1
+- scores:
+  - positive: 0..1
+  - negative: 0..1
+  - neutral: 0..1
+
+Fallback Behavior (When HF Weights Are Missing)
+-----------------------------------------------
+1) If transformers are available AND weights are present locally:
+   Use the transformer pipeline and blend with a domain lexicon.
+2) Else, try VADER (nltk SentimentIntensityAnalyzer) if the VADER lexicon is
+   available locally. You can allow a one-time download by setting:
+   ALLOW_NLTK_DOWNLOAD=1
+3) Else, use a domain lexicon heuristic tuned for skincare review language.
+
+Offline-Friendly Setup (Recommended)
+------------------------------------
+If you want the transformer path to work without network access:
+1) Temporarily set HF_LOCAL_FILES_ONLY=0
+2) Start the backend once so transformers can cache the weights
+3) Set HF_LOCAL_FILES_ONLY=1 again for fully offline runs
+
+Notes
+-----
+- The "avg_confidence" used in admin overview is derived from processed dataset
+  statistics in data/processed/cleaned_reviews.csv. It is not an accuracy score.
+- This model is for product-review analytics and is not suitable for medical or
+  safety-critical decision making.

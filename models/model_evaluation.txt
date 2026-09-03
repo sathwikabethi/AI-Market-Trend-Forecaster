@@ -1,0 +1,52 @@
+Model Evaluation (Operational Metrics)
+====================================
+
+This project records lightweight, operational evaluation metrics for the NLP
+pipeline based on the current processed dataset. These are meant to answer:
+"Is the model producing outputs and what is the label distribution?"
+
+This is NOT a supervised accuracy/precision/recall evaluation because the
+dataset in this repo does not include ground-truth sentiment labels.
+
+Source Of Truth
+---------------
+- CSV history: data/processed/model_evaluation_history.csv
+- Database table: model_evaluations (SQLite by default in data/app.db)
+- API surface: GET /admin/overview (includes latest_evaluation)
+
+Latest Recorded Run
+-------------------
+- run_id: eval-4cb757b194ad
+- created_at (UTC): 2026-03-17T13:37:40+00:00
+- model_name: nlp_baseline
+- coverage: 1.000
+- avg_confidence: 0.512
+- positive_ratio: 0.544
+- negative_ratio: 0.228
+- neutral_ratio: 0.228
+
+Recent Average (Last 10 Runs)
+-----------------------------
+- runs: 10
+- coverage: 1.000
+- avg_confidence: 0.513
+- positive_ratio: 0.547
+- negative_ratio: 0.219
+- neutral_ratio: 0.233
+
+How To Refresh
+--------------
+The backend writes new evaluation rows on startup (lifespan hook) by calling
+evaluate_model_quality(). You can also trigger it manually with:
+
+python -c "from src.core.evaluation import evaluate_model_quality; print(evaluate_model_quality())"
+
+This file can be regenerated anytime with:
+
+python scripts/update_model_docs.py
+
+Interpretation
+--------------
+- coverage: Proxy based on processed row count (capped at 1.0).
+- avg_confidence: Derived from sentiment_score distribution in processed data.
+- *_ratio: Ratio of labels in processed data.

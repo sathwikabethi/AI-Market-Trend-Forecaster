@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: market-trend-postgres
+    environment:
+      POSTGRES_DB: market_trend
+      POSTGRES_USER: market_user
+      POSTGRES_PASSWORD: market_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: market-trend-backend
+    environment:
+      DATABASE_URL: "postgresql+psycopg://market_user:market_pass@postgres:5432/market_trend"
+      REDIS_URL: "redis://redis:6379/0"
+      INGESTION_SCHEDULER_ENABLED: "1"
+      HF_LOCAL_FILES_ONLY: "1"
+      OTEL_ENABLED: "0"
+      CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: market-trend-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_BACKEND_URL: "http://backend:8002"
+      VITE_API_BASE_URL: "/api"
+    ports:
+      - "5173:5173"
+
+  redis:
+    image: redis:7-alpine
+    container_name: market-trend-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
